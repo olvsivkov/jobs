@@ -6,6 +6,19 @@ import { useUnisender } from '@/hooks/useUnisender'
 
 import svgLogo from '@/components/_icons/svgLogo.vue'
 import uiSnackbar from '@/components/_ui/uiSnackbar.vue'
+import { useField, useForm } from 'vee-validate'
+
+const { handleSubmit } = useForm({
+  validationSchema: {
+    phone(value) {
+      if (value?.length >= 9 && /^\+?\d+$/.test(value)) return true
+
+      return 'Ошибка: минимум 9 цифр'
+    }
+  }
+})
+
+const phone = useField('phone')
 
 const router = useRouter()
 const auth = useFirebase()
@@ -19,9 +32,14 @@ const visible = ref(false)
 const snackbar = ref(false)
 const expand = ref(false)
 
+const phoneSubmit = handleSubmit((values) => {
+  console.log(values)
+})
+
 const authenticate = async (email, password) => {
   if (type.value === 'register') {
     await auth.registerUser(email, password)
+    phoneSubmit()
   } else if (type.value === 'login') {
     await auth.loginUser(email, password)
   }
@@ -78,6 +96,23 @@ onMounted(() => {
           required
           @click:append-inner="visible = !visible"
         ></v-text-field>
+
+        <div v-if="type === 'register'">
+          <div
+            class="text-subtitle-1 text-medium-emphasis d-flex align-center justify-space-between"
+          >
+            Телефон
+          </div>
+
+          <v-text-field
+            v-model="phone.value.value"
+            :error-messages="phone.errorMessage.value"
+            prepend-inner-icon="mdi-phone-outline"
+            placeholder="Введите телефон"
+            density="compact"
+            variant="outlined"
+          ></v-text-field>
+        </div>
 
         <v-btn block type="submit" class="mb-2" size="large" variant="tonal">
           {{ type === 'register' ? 'Зарегистрироваться' : 'Войти' }}

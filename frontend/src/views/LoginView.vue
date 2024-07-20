@@ -8,7 +8,7 @@ import svgLogo from '@/components/_icons/svgLogo.vue'
 import uiSnackbar from '@/components/_ui/uiSnackbar.vue'
 import { useField, useForm } from 'vee-validate'
 
-const { handleSubmit } = useForm({
+const { handleSubmit, handleReset } = useForm({
   validationSchema: {
     phone(value) {
       if (value?.length >= 9 && /^\+?\d+$/.test(value)) return true
@@ -31,9 +31,13 @@ const type = ref('login')
 const visible = ref(false)
 const snackbar = ref(false)
 const expand = ref(false)
+const showModal = ref(false)
 
 const phoneSubmit = handleSubmit((values) => {
+  showModal.value = false
+  auth.isLoggedIn.value ? router.back() : (snackbar.value = true)
   console.log(values)
+  handleReset()
 })
 
 const authenticate = async (email, password) => {
@@ -44,13 +48,12 @@ const authenticate = async (email, password) => {
     await auth.loginUser(email, password)
   }
   subscribe(auth.currentUser.value.email)
-  auth.isLoggedIn.value ? router.back() : (snackbar.value = true)
 }
 
 const googleAuth = async () => {
   await auth.loginWithGoogle()
   subscribe(auth.currentUser.value.email)
-  auth.isLoggedIn.value ? router.back() : (snackbar.value = true)
+  showModal.value = true
 }
 
 onMounted(() => {
@@ -136,6 +139,29 @@ onMounted(() => {
       <ui-snackbar color="red" v-model="snackbar" :message="auth.errorMsg.value" />
     </v-form>
     <v-btn class="btn__close" icon="mdi-close" @click="router.back()"></v-btn>
+    <v-dialog v-model="showModal" max-width="400" persistent transition="dialog-bottom-transition">
+      <v-form>
+        <v-card title="Введите номер телефона">
+          <template v-slot:text>
+            <v-text-field
+              v-model="phone.value.value"
+              :error-messages="phone.errorMessage.value"
+              prepend-inner-icon="mdi-phone-outline"
+              placeholder="Введите телефон"
+              density="compact"
+              variant="outlined"
+            ></v-text-field>
+          </template>
+          <template v-slot:actions>
+            <v-spacer></v-spacer>
+
+            <v-btn @click="showModal = false"> Отмена </v-btn>
+
+            <v-btn @click="phoneSubmit"> OK </v-btn>
+          </template>
+        </v-card>
+      </v-form>
+    </v-dialog>
   </div>
 </template>
 

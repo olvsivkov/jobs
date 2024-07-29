@@ -3,29 +3,42 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useFirebase } from '@/hooks/useFirebase'
 import { useUnisender } from '@/hooks/useUnisender'
+import { useField, useForm } from 'vee-validate'
+import * as yup from 'yup'
 
 import svgLogo from '@/components/_icons/svgLogo.vue'
 import uiSnackbar from '@/components/_ui/uiSnackbar.vue'
-import { useField, useForm } from 'vee-validate'
 
-const { handleSubmit, handleReset } = useForm({
-  validationSchema: {
-    phone(value) {
-      if (value?.length >= 9 && /^\+?\d+$/.test(value)) return true
-
-      return 'Ошибка: минимум 9 цифр'
-    }
-  }
+const validationSchema = yup.object({
+  email: yup
+    .string()
+    .email('Некорректный формат email')
+    .matches(/^.*@.*\..*.$/, 'Некорректный формат email')
+    .max(120, 'Максимум 120 символов')
+    .required('Поле для email обязательно'),
+  password: yup
+    .string()
+    .min(6, 'Введите минимум 6 символов')
+    .required('Поле для пароля обязательно'),
+  phone: yup
+    .string()
+    .matches(/^\+?\d+$/, 'Телефон должен содержать только цифры')
+    .min(10, 'Введите минимум 10 цифр')
+    .required('Поле для телефона обязательно')
 })
 
+const { handleSubmit, handleReset } = useForm({
+  validationSchema
+})
+
+const email = useField('email')
+const password = useField('password')
 const phone = useField('phone')
 
 const router = useRouter()
 const auth = useFirebase()
 const { subscribe } = useUnisender()
 
-const email = ref('')
-const password = ref('')
 const type = ref('login')
 
 const visible = ref(false)
@@ -65,7 +78,7 @@ onMounted(() => {
 <template>
   <div class="background pa-8 h-screen d-flex flex-column justify-center align-center">
     <svg-logo />
-    <v-form @submit.prevent="authenticate(email, password)" v-show="expand">
+    <v-form @submit.prevent="authenticate(email.value.value, password.value.value)" v-show="expand">
       <v-card
         class="mx-auto pa-8 mt-8 w-100"
         elevation="8"
@@ -76,7 +89,8 @@ onMounted(() => {
         <div class="text-subtitle-1 text-medium-emphasis">Почта</div>
 
         <v-text-field
-          v-model="email"
+          v-model="email.value.value"
+          :error-messages="email.errorMessage.value"
           density="compact"
           placeholder="Введите почту"
           prepend-inner-icon="mdi-email-outline"
@@ -89,7 +103,8 @@ onMounted(() => {
         </div>
 
         <v-text-field
-          v-model="password"
+          v-model="password.value.value"
+          :error-messages="password.errorMessage.value"
           :append-inner-icon="visible ? 'mdi-eye-off' : 'mdi-eye'"
           :type="visible ? 'text' : 'password'"
           density="compact"
